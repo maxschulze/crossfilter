@@ -170,6 +170,14 @@ aside {
 
 <p>Some questions to consider: How does time-of-day correlate with <a href="javascript:filter([null, [100, 150], null, null])">arrival delay</a>? Are <a href="javascript:filter([null, null, [1700, 2000], null])">longer</a> or <a href="javascript:filter([null, null, [0, 300], null])">shorter</a> flights more likely to arrive early? What happened on <a href="javascript:filter([null, [80, 150], null, [new Date(2001, 0, 12), new Date(2001, 0, 13)]])">January 12</a>? How do flight patterns differ between <a href="javascript:filter([null, null, null, [new Date(2001, 0, 27), new Date(2001, 0, 29)]])">weekends</a> and <a href="javascript:filter([null, null, null, [new Date(2001, 0, 29), new Date(2001, 1, 3)]])">weekdays</a>, or <a href="javascript:filter([[4, 7], null, null, null])">mornings</a> and <a href="javascript:filter([[21, 24], null, null, null])">nights</a>? <a href="https://github.com/square/crossfilter/tree/gh-pages">Fork this example</a> and try your own data!
 
+<div class="airport-list" id="origins">
+  <h2>Filter by source airport</h2>
+</div>
+
+<div class="airport-list" id="destinations">
+  <h2>Filter by destination airport</h2>
+</div>
+
 <div id="charts">
   <div id="hour-chart" class="chart">
     <div class="title">Time of Day</div>
@@ -206,6 +214,7 @@ aside {
 <script src="d3.v2.min.js"></script>
 <script>
 
+var origins;
 // (It's CSV, but GitHub Pages only gzip's JSON at the moment.)
 d3.csv("flights-3m.json", function(flights) {
 
@@ -237,7 +246,29 @@ d3.csv("flights-3m.json", function(flights) {
       delay = flight.dimension(function(d) { return Math.max(-60, Math.min(149, d.delay)); }),
       delays = delay.group(function(d) { return Math.floor(d / 10) * 10; }),
       distance = flight.dimension(function(d) { return Math.min(1999, d.distance); }),
-      distances = distance.group(function(d) { return Math.floor(d / 50) * 50; });
+      distances = distance.group(function(d) { return Math.floor(d / 50) * 50; }),
+      origin = flight.dimension(function(d) { return d.origin; }),
+      origins = origin.group().all();
+      destination = flight.dimension(function(d) { return d.destination; }),
+      destinations = destination.group().all();
+
+
+
+  // origins_list.exit().remove();
+
+  function buildAirportListElement(code) {
+    var listElement = document.createElement("li"),
+        checkbox = document.createElement("input");
+
+    listElement.innerHTML    = code;
+    checkbox.name           = "origin";
+    checkbox.value          = code;
+    checkbox.type           = "checkbox";
+
+    listElement.appendChild(checkbox);
+
+    return listElement;
+  }
 
   var charts = [
 
@@ -284,6 +315,20 @@ d3.csv("flights-3m.json", function(flights) {
   var list = d3.selectAll(".list")
       .data([flightList]);
 
+  airportList("origins");
+  airportList("destinations");
+
+  var selected_origins = [],
+      selected_destinations = []
+
+  d3.selectAll("#origins input").on("click", function() {
+    airportClick(d3.select(this), "origins");
+  });
+
+  d3.selectAll("#destinations input").on("click", function() {
+    airportClick(d3.select(this), "destinations");
+  });
+
   // Render the total.
   d3.selectAll("#total")
       .text(formatNumber(flight.size()));
@@ -316,10 +361,53 @@ d3.csv("flights-3m.json", function(flights) {
     renderAll();
   };
 
+  window.filterByOrigins = function(args) {
+    origin.filter(null);
+    eval("origin.filter(" + args.join(',') + ");");
+    renderAll();
+  };
+
+  window.filterByDestinations = function(args) {
+    destination.filter(null);
+    eval("destination.filter(" + args.join(',') + ");");
+    renderAll();
+  };
+
   window.reset = function(i) {
     charts[i].filter(null);
     renderAll();
   };
+
+  function airportList(name) {
+    var airports = eval(name + ".map(function(d) { return d.key });");
+    var airport_list = d3.select("#" + name).selectAll("h2").data(airports);
+
+    airport_list.enter()
+      .append("div")
+      .text(function(d) { return d })
+      .append("input")
+      .attr("type", "checkbox")
+      .attr("value", function(d) { return d });
+
+    airport_list.order();
+    airport_list.exit().remove();
+  }
+
+  function airportClick(element, collection) {
+    eval("selected_" + collection + " = []");
+
+    d3.selectAll("#" + collection + " input:checked").each(function() {
+      var val = '"' + d3.select(this).attr('value') + '"';
+      
+      eval("selected_" + collection + ".push(val)");
+    });
+
+    if(collection == "origins") {
+      eval("window.filterByOrigins(selected_" + collection + ");");
+    } else {
+      eval("window.filterByDestinations(selected_" + collection + ");");
+    }
+  }
 
   function flightList(div) {
     var flightsByDate = nestByDate.entries(date.top(40));
