@@ -5,6 +5,26 @@
 
 @import url(http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400,700);
 
+.airport-list {
+  clear:both;
+}
+.airport-list h2 {
+  clear:both;
+}
+.airport-list div {
+  position: relative;
+  padding-left: 25px;
+  float: left;
+  width: 50px;
+  height: 20px;
+  margin-right: 15px;
+}
+.airport-list input {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+}
+
 body {
   font-family: "Helvetica Neue";
   margin: 40px auto;
@@ -398,7 +418,7 @@ d3.csv("flights-3m.json", function(flights) {
 
     d3.selectAll("#" + collection + " input:checked").each(function() {
       var val = '"' + d3.select(this).attr('value') + '"';
-      
+
       eval("selected_" + collection + ".push(val)");
     });
 
